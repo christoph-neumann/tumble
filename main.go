@@ -18,9 +18,11 @@ import (
 )
 
 var opts struct {
-	Insecure bool `long:"insecure" description:"do not validate the server certificate"`
-	Mute     bool `long:"mute" description:"don't transmit audio"`
-	Deafen   bool `long:"deafen" description:"don't play audio (does not imply mute)"`
+	Insecure bool   `long:"insecure" description:"do not validate the server certificate"`
+	Mute     bool   `long:"mute" description:"don't transmit audio"`
+	Deafen   bool   `long:"deafen" description:"don't play audio (does not imply mute)"`
+	UserCert string `long:"user-cert" description:"user certificate file (PEM format)"`
+	UserKey  string `long:"user-key" description:"user key file if the key is not in the cert (PEM format)"`
 	Args     struct {
 		Name string `description:"mumble URL such as mumble://username:pass@domain.name:64738/channel/path. User and port are optional." positional-arg-name:"URL"`
 	} `positional-args:"yes" required:"yes"`
@@ -63,6 +65,17 @@ func main() {
 
 	var tlsConfig tls.Config
 	tlsConfig.InsecureSkipVerify = opts.Insecure
+	if opts.UserCert != "" {
+		key := opts.UserCert
+		if opts.UserKey != "" {
+			key = opts.UserKey
+		}
+		if certificate, err := tls.LoadX509KeyPair(opts.UserCert, key); err != nil {
+			die(err)
+		} else {
+			tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)
+		}
+	}
 
 	onDisconnect := make(chan bool)
 
